@@ -1,0 +1,126 @@
+                select  
+                        --  cus.id,
+                        --  cus.person_info,
+                        --  cus.customer_number,
+                        --  cus.cifnumber,
+                        --  cus.contact_info,
+                        --  cus.financial_information,
+                        --  current_id.id_card_date,
+                        --  appl.id, 
+                        --  person.full_name,
+                        --  person.date_of_birth,
+                        --  person.place_of_birth,
+                        --  person.marital_status,
+                        --  party.party_status,
+                        --  party.loan_application_fk,
+                        -- 'F1 NEO' as system,
+                        appl.application_number,
+                        current_id.id_card_no,
+                        person.age,
+                        case when person.gender = 2526 then 'Female'
+                              when person.gender = 2527 then 'Male'
+                                else None end as gender,
+                        --fb_address.address as fb_address, fb_address.city_name as fb_city,
+                        --cur_address.address as cur_address, cur_address.city_name as cur_city,
+                        occupation.months_in_occupation,
+                        address_city.city region,
+                        industries.name industry,
+                        family_info.familyinfo_house_ownership type_of_house,
+                        income_info.verified_income,
+                        pcb_info.scoreraw pcb_score,
+                        app_processing.decision_date
+
+                from
+                    neo_cm_ga25_gir_sd.customer cus,
+                    (
+                        select  paper.customer_fk, paper.id paper_id, paper.identification_number as id_card_no,
+                                paper.issue_date as id_card_date
+                        from neo_cas_lms_ga25_gir_sd.identification_detail paper
+                        where   paper.identification_type = 16024 and
+                                paper.customer_fk is not null
+                    ) current_id,
+                    neo_cm_ga25_gir_sd.person_info person,
+                    neo_cm_ga25_gir_sd.party party,
+                    -- new query
+                    (
+                        select 
+                            oi.months_in_occupation, 
+                            oi.customer_fk_ns,
+                            oi.industry
+                        from neo_cm_ga25_gir_sd.occupation_info oi
+                    ) occupation,
+                    (
+                        select 
+                            add_de.city,
+                            add_de.addresstype,
+                            add_de.customer_number
+                        from neo_cm_ga25_gir_sd.address_details add_de
+                        where add_de.addresstype = 'Family Book Address'
+                    ) address_city,
+                    (
+                        select
+                            ind.id,
+                            ind.name
+                        from neo_cm_ga25_gir_sd.industry ind
+                    ) industries,
+                    (
+                        select 
+                            form.familyinfo_house_ownership,
+                            form.application_number
+                        from neo_cm_ga25_gir_sd.sub_persistent_form_data form
+                    ) family_info,
+                    (
+                        select 
+                            st.verified_income,
+                            st.APPLICATION_NUMBER
+                        from risk.TRONGDV_SCORECARD_TOTAL st 
+                    ) income_info,
+                    (
+                        select 
+                            mcbi.application_number,
+                            mcbi.scoreraw
+                        from risk_app.tbl_ra_pcb_matched_customer_basic_infor mcbi
+                    ) pcb_info,
+                    (
+                        select max(app_pr.creation_time_stamp) decision_date
+                        from neo_cm_ga25_gir_sd.app_processing_step_data app_pr
+                        where app_pr.stage_name in ("Credit Approval", "Rejection")
+                    ) app_processing,
+                    -- end new
+                    /*
+                        (
+                        select addr.contact_info_fk, e.city_name,
+                                addr.address_type, addr.address_line2 || ' ' || addr.address_line3 as address
+                        from  neo_cm_ga25_gir_sd.address addr,
+                                neo_cm_ga25_gir_sd.city e
+                        where addr.address_type = 2590 and
+                                e.id = addr.city
+                        ) fb_address,
+                        (
+                        select addr.contact_info_fk, e.city_name,
+                                addr.address_type, addr.address_line2 || ' ' || addr.address_line3 as address
+                        from  neo_cm_ga25_gir_sd.address addr,
+                                neo_cm_ga25_gir_sd.city e
+                        where addr.address_type = 2592 and
+                                e.id = addr.city
+                        ) cur_address,
+                    */
+                    neo_cm_ga25_gir_sd.loan_application appl
+
+                where cus.ID = current_id.customer_fk and
+                      person.id = cus.person_info and
+                      cus.id = party.customer and
+                      appl.id = party.loan_application_fk and
+                      cus.id = occupation.customer_fk_ns and
+                      cus.customer_number = address_city.customer_number and
+                      industries.id = occupation.industry and
+                      appl.application_number = family_info.application_number and
+                      appl.application_number = income_info.application_number and
+                      pcb_info.application_number = appl.application_number and
+                      -- them dk join
+                      -- app_processing. = 
+                      -- fb_address.contact_info_fk = cus.contact_info and
+                      -- cur_address.contact_info_fk = cus.contact_info and
+                      cus.id = '%s' and 
+                      occupation.customer_fk_ns is not null and
+                      appl.application_number is not null

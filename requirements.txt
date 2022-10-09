@@ -1,0 +1,20 @@
+numpy
+pandas
+lxml
+beautifulsoup4
+contextvars
+fastapi
+fastapi-versioning
+greenlet
+pydantic
+urllib3
+uvicorn
+starlette
+h11
+httptools
+sqlalchemy
+
+
+
+# defined input -> calculate drool input based on input -> PCBException and xmlError
+# -> check XmlError ->  create xml -> xmlSource -> FeatureBuilder -> FeatureMange -> ProcessXml
